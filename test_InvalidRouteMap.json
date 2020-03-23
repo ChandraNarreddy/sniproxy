@@ -1,0 +1,20 @@
+{	"Routes":[
+	              {
+	                "Host":"127.0.0.1",
+	                "MethodPathMaps": {
+                                      "Method": "GET",
+                                      "Path"  : "/wild/:domain/*end",
+                                      "Route" : [ "https://www.",0,"/.com/", 1 ],
+																			"AuthenticatorScheme": "testPass",
+																			"TokenType": "Either"
+	                                  },
+																		{
+																			"Method": "GET",
+																			"Path"  : "/invalid/",
+																			"Route" : [/,,"?"],
+																			"AuthenticatorScheme": "testFail",
+																			"TokenType": "Either"
+																		}
+	               }
+								]
+		}

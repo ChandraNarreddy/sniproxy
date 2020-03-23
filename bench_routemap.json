@@ -1,0 +1,83 @@
+{	"Routes":[
+									{
+										"Host":"127.0.0.1",
+										"MethodPathMaps": [
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path1/:echo",
+																					"Route" : [ "http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path2/path3/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path4/path5/path6/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path7/path8/path9/path10/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path11/path12/path13/path14/path15/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				}
+																			]
+									},
+									{
+										"Host":"localhost",
+										"MethodPathMaps": [
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path1/:echo",
+																					"Route" : [ "http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path2/path3/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path4/path5/path6/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path7/path8/path9/path10/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				},
+																				{
+																					"Method": "GET",
+																					"Path"  : "/path11/path12/path13/path14/path15/:echo",
+																					"Route" : ["http://127.0.0.1:9090/", 0],
+																					"AuthenticatorScheme": "testPass",
+																					"TokenType": "Either"
+																				}
+																			]
+										}
+									]
+			}

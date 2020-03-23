@@ -1,0 +1,99 @@
+{	"Routes":[
+	              {
+	                "Host":"127.0.0.1",
+	                "MethodPathMaps": [
+																			{
+																				"Method": "GET",
+																				"Path"  : "/authorizationError/",
+																				"Route" : [-1, "defaultAuthorizationErrorLocalHandler"],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
+																			{
+																				"Method": "GET",
+																				"Path"  : "/requestUnauthorized/",
+																				"Route" : [-1, "defaultAuthorizationFailureLocalHandler"],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/wild/:domain/*end",
+	                                      "Route" : [ "https://www.",0,".com/", 1 ],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Either"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/blindforwarder/:scheme/:hostname/*end",
+	                                      "Route" : [ 0, "://", 1, "/", 2 ],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Either"
+	                                    },
+	                                    {
+	                                      "Method": "GET",
+	                                      "Path"  : "/google/*query",
+	                                      "Route" : ["https://www.google.com/search?q=", 0],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Cookie"
+	                                    },
+	                                    {
+	                                      "Method": "GET",
+	                                      "Path"  : "/failureCase/*query",
+	                                      "Route" : ["https://www.domain.com/search?q=", 0, 1],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Either"
+	                                    },
+	                                    {
+	                                      "Method": "GET",
+	                                      "Path"  : "/redirect/",
+	                                      "Route" : ["http://outlook.live.com/mail/"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Either"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/invalid/",
+	                                      "Route" : [],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Either"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/authFailure/",
+	                                      "Route" : ["https://www.google.com/"],
+																				"AuthenticatorScheme": "testFail",
+																				"TokenType": "Either"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/WrongTokenType/",
+	                                      "Route" : ["https://www.google.com/"],
+																				"AuthenticatorScheme": "testFail",
+																				"TokenType": "Neither"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/AuthCheckError/",
+	                                      "Route" : ["https://www.google.com/"],
+																				"AuthenticatorScheme": "testAuthCheckError",
+																				"TokenType": "Neither"
+	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/InvalidRoutePath/",
+	                                      "Route" : ["abc"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "Neither"
+	                                    },
+																			{
+																				"Method": "GET",
+	                                      "Path"  : "/resource/behind/selfhandling/Authenticator",
+	                                      "Route" : ["https://www.google.com/"],
+																				"AuthenticatorScheme": "requestFulfilling",
+																				"TokenType": "EITHER"
+																			}
+	                                  ]
+	                }
+								]
+		}
