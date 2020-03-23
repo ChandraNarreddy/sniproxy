@@ -957,9 +957,6 @@ func TestSniProxy(t *testing.T) {
 			Transport: &http.Transport{
 				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 				DisableKeepAlives: false,
-				Proxy: func(*http.Request) (*url.URL, error) {
-					return url.Parse("http://127.0.0.1:9001")
-				},
 			},
 			Jar: jar,
 			// we will not follow any redirect rather pass the instructions to
