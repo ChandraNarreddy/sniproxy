@@ -10,8 +10,13 @@ import (
 type defaultAuthTokenType int
 
 const (
+	//COOKIE is used when authtoken should be handled as a http Cookie.
 	COOKIE defaultAuthTokenType = iota
+	//HEADER is used when authtoken should be handled in a http header (mobile apps)
 	HEADER
+	//EITHER choose this when you are not sure where the authtoken needs to be handled.
+	// It will put the authtoken both in the cookie and as a header in the response and
+	// also checks both places to find the authtoken in subsequent requests
 	EITHER
 )
 

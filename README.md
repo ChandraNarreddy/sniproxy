@@ -228,5 +228,5 @@ MIT License
 
 * Julien Schmidt for [httprouter](https://github.com/julienschmidt/httprouter)
 * Pavel Chernykh for [keystore-go](https://github.com/pavel-v-chernykh/keystore-go)
-* Vladimir Mihailenco for [msgpack]("https://github.com/vmihailenco/msgpack")
+* Vladimir Mihailenco for [msgpack](https://github.com/vmihailenco/msgpack)
 * Awesome authors of Golang's TLS library

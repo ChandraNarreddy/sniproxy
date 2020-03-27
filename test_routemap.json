@@ -81,6 +81,20 @@
 	                                    },
 																			{
 	                                      "Method": "GET",
+	                                      "Path"  : "/Non-existingLocalHandlerPath/",
+																				"Route" : [-1, "Non-existing-LocalHandler"],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/IncorrectLocalHandlerRouteMap/",
+																				"Route" : [-1, 0],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
+																			{
+	                                      "Method": "GET",
 	                                      "Path"  : "/InvalidRoutePath/",
 	                                      "Route" : ["abc"],
 																				"AuthenticatorScheme": "testPass",

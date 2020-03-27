@@ -21,15 +21,16 @@ var (
 	localHandlers   = make(map[string]LocalHandler)
 )
 
+//LocalHandler is a generic interface for implementations to satisfy as a stand-in for it.
 type LocalHandler interface {
 	//Handle handles the request and responds back on the writer
 	Handle(w http.ResponseWriter, r *http.Request)
 }
 
-//Every new LocalHandler that gets created needs to call this function in an init method
-//to make it available in the localHandlers map.
-//Further, the main function of any consuming app should also declare a (non-referencing) import on the
-//implementor package
+//RegisterLocalHandler is a function for any new LocalHandler to be registered and
+// be made available in the localHandlers map.
+// Further, the main function of any consuming app should also declare a (non-referencing) import on the
+// implementor package
 func RegisterLocalHandler(name string, a LocalHandler) {
 	localHandlersMu.Lock()
 	defer localHandlersMu.Unlock()
@@ -43,7 +44,11 @@ func RegisterLocalHandler(name string, a LocalHandler) {
 }
 
 var (
-	AuthorizationErrorRedirectPath  = "/authorizationError/"
+	//AuthorizationErrorRedirectPath is the path where all requests are redirected
+	// that return authChecker errors
+	AuthorizationErrorRedirectPath = "/authorizationError/"
+	//AuthorizationFailedRedirectPath is the path where all requests  are redirected
+	// when authChecker has returned that the request was unauthorized
 	AuthorizationFailedRedirectPath = "/requestUnauthorized/"
 )
 
