@@ -3,6 +3,7 @@ package sniproxy
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -12,8 +13,11 @@ import (
 )
 
 const (
-	DefaultAuthTokenName                      = "SniProxyAuth"
-	DefaultAuthTokenEncryptionKeySize         = 64
+	//DefaultAuthTokenName is SniProxyAuth
+	DefaultAuthTokenName = "SniProxyAuth"
+	//DefaultAuthTokenEncryptionKeySize is 64
+	DefaultAuthTokenEncryptionKeySize = 64
+	//DefaultAuthTokenExpirationDurationInHours is 12
 	DefaultAuthTokenExpirationDurationInHours = 12
 )
 
@@ -28,6 +32,10 @@ type token struct {
 	NotValidAfter int64  `json:"NotValidAfter"`
 }
 
+//NewDefaultAuthToken generates a defaultAuthToken. Empty value for authTokenName
+// will default its value to the DefaultAuthTokenName whereas nil value for secret
+// results in choosing a random and ephemeral secret that remains active only
+// for as long as the memory lives
 func NewDefaultAuthToken(authTokenName string, secret []byte) *defaultAuthToken {
 	authToken := &defaultAuthToken{
 		tokenEncryptionKeySize: DefaultAuthTokenEncryptionKeySize,
@@ -40,7 +48,11 @@ func NewDefaultAuthToken(authTokenName string, secret []byte) *defaultAuthToken 
 	if secret != nil {
 		authToken.setSIV(secret)
 	} else {
-		authToken.setSIV(generateRandomKey())
+		key, err := generateRandomKey()
+		if err != nil {
+			log.Fatalf("Fatal - Could not generate a key for DefaulAuthToken.\n%#v", err.Error())
+		}
+		authToken.setSIV(key)
 	}
 	return authToken
 }
@@ -71,7 +83,7 @@ func (c *defaultAuthToken) Validate(base64EncodedToken string, authScheme string
 	if failure != nil {
 		return false, "", DefaultAuthCheckerTokenValidationErr
 	}
-	var readIntoAuthToken = make(map[string]token)
+	var readIntoAuthToken map[string]token
 	if unMarshallErr := msgpack.Unmarshal(plainBytes, &readIntoAuthToken); unMarshallErr != nil {
 		log.Printf("Sniproxy error - Unmarshalling of the token %#v failed - %#v", tokenValue, unMarshallErr)
 		return false, "", DefaultAuthCheckerErr
@@ -92,7 +104,7 @@ func (c *defaultAuthToken) TokenMaker(r *http.Request, principal string,
 	expiry time.Time, authScheme string, tokenType AuthTokenType) (string, error) {
 
 	//first get hold of the tokentype and extract any existing token from there.
-	var existingTokenValue []byte = nil
+	var existingTokenValue []byte
 	switch tokenType {
 	case COOKIE:
 		cookie, cookieReadErr := r.Cookie(c.GetTokenName())
@@ -114,17 +126,22 @@ func (c *defaultAuthToken) TokenMaker(r *http.Request, principal string,
 			return c.TokenMaker(r, principal, expiry, authScheme, HEADER)
 		}
 	}
-	var authToken = make(map[string]token)
+	var authToken map[string]token
 	newToken := token{
 		Identifier:    principal,
 		NotValidAfter: expiry.UnixNano(),
 	}
 	if existingTokenValue != nil {
-		unwrapErr := msgpack.Unmarshal(existingTokenValue, authToken)
-		if unwrapErr == nil {
+		plainBytesExistingToken, failure := c.siv.Unwrap(existingTokenValue)
+		if failure != nil {
+			return "", failure
+		}
+		unMarshalError := msgpack.Unmarshal(plainBytesExistingToken, &authToken)
+		if unMarshalError == nil {
 			authToken[authScheme] = newToken
 		}
 	} else {
+		authToken = make(map[string]token)
 		authToken[authScheme] = newToken
 	}
 	b, wrapErr := msgpack.Marshal(authToken)
@@ -138,13 +155,13 @@ func (c *defaultAuthToken) TokenMaker(r *http.Request, principal string,
 	return base64.StdEncoding.EncodeToString(encryptedBytes), nil
 }
 
-func generateRandomKey() []byte {
+func generateRandomKey() ([]byte, error) {
 	key := make([]byte, 64)
 	_, err := rand.Read(key)
 	if err != nil {
-		return []byte("thisIsSoWrongOnSoManyLevels")[0:63]
+		return nil, fmt.Errorf("Error while generating key %#v", err)
 	}
-	return key
+	return key, nil
 }
 
 func sivWithKey(key []byte) siv.SIV {

@@ -8,16 +8,21 @@ import (
 )
 
 var (
-	DefaultAuthCheckerErr                = errors.New("Unknown Error occurred in DefaultAuthChecker")
-	DefaultAuthCheckerTokenMakerErr      = errors.New("Error occurred while baking a token")
+	//DefaultAuthCheckerErr is returned when an unknown error occurs during authChecker run
+	DefaultAuthCheckerErr = errors.New("Unknown Error occurred in DefaultAuthChecker")
+	//DefaultAuthCheckerTokenMakerErr is returned when an error occurs during tokenMaker run
+	DefaultAuthCheckerTokenMakerErr = errors.New("Error occurred while baking a token")
+	//DefaultAuthCheckerTokenValidationErr is returned when an error occurs during token validation
 	DefaultAuthCheckerTokenValidationErr = errors.New("Error occured while validating the token")
-	DefaultAuthCheckerTokenExpiredErr    = errors.New("Cookie has expired")
+	//DefaultAuthCheckerTokenExpiredErr is returned when an authToken has expired its lifetime
+	DefaultAuthCheckerTokenExpiredErr = errors.New("AuthToken has expired")
 )
 
 type defaultAuthChecker struct {
 	authToken AuthToken
 }
 
+//NewDefaultAuthChecker function returns a new instance of defaultAuthChecker
 func NewDefaultAuthChecker(token AuthToken) *defaultAuthChecker {
 	authChecker := &defaultAuthChecker{
 		authToken: token,

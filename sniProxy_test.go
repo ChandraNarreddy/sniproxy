@@ -2,9 +2,11 @@ package sniproxy
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -114,6 +116,20 @@ const (
 																				"AuthenticatorScheme": "testAuthCheckError",
 																				"TokenType": "Neither"
 	                                    },
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/Non-existingLocalHandlerPath/",
+																				"Route" : [-1, "Non-existing-LocalHandler"],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
+																			{
+	                                      "Method": "GET",
+	                                      "Path"  : "/IncorrectLocalHandlerRouteMap/",
+																				"Route" : [-1, 0],
+																				"AuthenticatorScheme": "passthrough",
+																				"TokenType": "Neither"
+																			},
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/InvalidRoutePath/",
@@ -851,11 +867,93 @@ func TestProxyHandlerMapServeHTTP(t *testing.T) {
 	}
 }
 
-func TestRouteBuilder(t *testing.T) {
+func TestDefaultAuthToken(t *testing.T) {
+	underlengthKey := make([]byte, 32)
+	rand.Read(underlengthKey)
+	NewDefaultAuthToken("awesomeAuthToken", underlengthKey)
 
-}
+	authTokenWithDefaults := NewDefaultAuthToken("", nil)
+	testReq, _ := http.NewRequest(http.MethodGet, "https://localhost:9001", nil)
 
-func TestIsSigAlgSupported(t *testing.T) {
+	testToken1, err1 := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser1",
+		time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+		"AuthScheme1", EITHER)
+	if err1 != nil {
+		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for EITHER TokenType")
+	}
+	testReq.Header.Set(DefaultAuthTokenName, testToken1)
+	testReq.Header.Set("Cookie", DefaultAuthTokenName+"="+testToken1)
+
+	testToken2, err2 := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser2",
+		time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+		"AuthScheme2", HEADER)
+	if err2 != nil {
+		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for HEADER TokenType")
+	}
+	testReq.Header.Set(DefaultAuthTokenName, testToken2)
+	testReq.Header.Del("Cookie")
+	testReq.Header.Set("Cookie", DefaultAuthTokenName+"="+testToken2)
+
+	testToken3, err3 := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser3",
+		time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+		"AuthScheme3", COOKIE)
+	if err3 != nil {
+		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for COOKIE TokenType")
+	}
+	valid1, principalID1, err4 := authTokenWithDefaults.Validate(testToken3, "AuthScheme3")
+	if err4 != nil {
+		t.Errorf("\nDefaultAuthToken.Validate() failed due to an error %#v", err4)
+	}
+	if !valid1 {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to validate correctly")
+	}
+	if principalID1 != "sniTestUser3" {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to validate user to the correct principalID")
+	}
+
+	tokenValue3, _ := base64.StdEncoding.DecodeString(testToken3)
+	plainBytes, _ := authTokenWithDefaults.siv.Unwrap(tokenValue3)
+	encryptedTruncedBytes, _ := authTokenWithDefaults.siv.Wrap(
+		plainBytes[len(plainBytes)-5 : len(plainBytes)])
+	valid2, _, err5 := authTokenWithDefaults.Validate(base64.StdEncoding.
+		EncodeToString(encryptedTruncedBytes), "AuthScheme3")
+	if valid2 {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to invalidate for an unmarshallable token")
+	}
+	if err5 == nil {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to throw error for an unmarshallable token")
+	}
+
+	expiredToken, _ := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser4",
+		time.Unix(0, 0), "AuthScheme4", HEADER)
+	valid3, _, err6 := authTokenWithDefaults.Validate(expiredToken, "AuthScheme4")
+	if valid3 {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to invalidate an expired token")
+	}
+	if err6 == nil {
+		t.Errorf("\nDefaultAuthToken.Validate() failed to throw error for an expired token")
+	}
+
+	testReq.Header.Set(DefaultAuthTokenName, testToken3)
+	testReq.Header.Del("Cookie")
+	testToken4, err7 := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser5",
+		time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+		"AuthScheme4", EITHER)
+	if err7 != nil {
+		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for" +
+			"EITHER TokenType with HEADER alone present in the request")
+	}
+
+	testReq.Header.Del(DefaultAuthTokenName)
+	testReq.Header.Del("Cookie")
+	testReq.Header.Set("Cookie", DefaultAuthTokenName+"="+testToken4)
+	_, err8 := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser6",
+		time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+		"AuthScheme5", EITHER)
+	if err8 != nil {
+		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for" +
+			"EITHER TokenType with COOKIE alone present in the request")
+	}
 
 }
 
@@ -984,6 +1082,8 @@ func TestSniProxy(t *testing.T) {
 		testURIMaps[http.StatusMovedPermanently] = append(testURIMaps[http.StatusMovedPermanently], "/WrongTokenType/")
 		testURIMaps[http.StatusMovedPermanently] = append(testURIMaps[http.StatusMovedPermanently], "/AuthCheckError/")
 		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/InvalidRoutePath/")
+		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], "/Non-existingLocalHandlerPath/")
+		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], "/IncorrectLocalHandlerRouteMap/")
 
 		for testStatus, testURIMap := range testURIMaps {
 			for index, testURI := range testURIMap {
