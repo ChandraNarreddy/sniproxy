@@ -1,5 +1,7 @@
 # sniproxy
 
+[![Build Status](https://travis-ci.org/ChandraNarreddy/sniproxy.svg?branch=master)](https://travis-ci.org/ChandraNarreddy/sniproxy)
+
  SNI respecting TLS reverse proxy that has support for pluggable authentication. Built on top of the TLS termination sophistication and SNI capabilities of [SillyProxy](https://github.com/ChandraNarreddy/sillyproxy). Allows to make use of one's own authentication mechanisms, authorization checks, session management tricks and authentication token handling. Default implementations  provided for authorization checking, session management and authentication token handling should make up for most basic cases.
 
 ## Salient Features -
