@@ -1,0 +1,11 @@
+language: go
+go:
+  - 1.10
+  - 1.11
+  - 1.12
+  - tip
+before_install:
+  - go get github.com/julienschmidt/httprouter
+  - go get github.com/pavel-v-chernykh/keystore-go
+  - go get github.com/ChandraNarreddy/siv
+  - go get github.com/vmihailenco/msgpack
