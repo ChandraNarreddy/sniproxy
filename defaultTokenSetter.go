@@ -60,6 +60,7 @@ func (c *defaultTokenSetter) SetToken(w http.ResponseWriter, r *http.Request,
 			Expires:  time.Now(),
 			Secure:   true,
 			HttpOnly: true,
+			Path:     "/",
 		}
 		http.SetCookie(w, cookie)
 	case HEADER:
