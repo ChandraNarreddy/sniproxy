@@ -12,7 +12,7 @@
 * One can also customize their authTokens by implementing the [authToken](https://github.com/ChandraNarreddy/sniproxy/blob/master/authToken.go) interface. Again, the default implementation [defaultAuthToken](https://github.com/ChandraNarreddy/sniproxy/blob/master/defaultAuthToken.go) should meet most cases.
 * [TokenSetter](https://github.com/ChandraNarreddy/sniproxy/blob/master/tokenSetter.go) interface can be extended to customize the placement and type of auth token returned in the proxy's response. The tokentype is inferred for each route from the routemap.json file. The default implementation [defaultTokenSetter](https://github.com/ChandraNarreddy/sniproxy/blob/master/defaultTokenSetter.go) covers the common use cases - Cookie, Header and Either.
 * The proxy also supports defining locally handled requests by setting their routes as `[-1, "localHandlerRegistryName"]`, where **-1** indicates that the route is locally handled while **"localHandlerRegistryName"** is the name under which a _LocalHandler_ implementation of [LocalHandler](https://github.com/ChandraNarreddy/sniproxy/blob/master/assignroutes.go) interface is registered with _RegisterLocalHandler_. How-to in the Usage section to follow.
-* SniProxy requires that the following paths at a minimum are locally handled - **"/authorizationError/"** and **"/requestUnauthorized/"**. You may choose to register the default implementations _defaultAuthorizationErrorRedirectPathLocalHandler_ and _defaultAuthorizationFailedRedirectPathLocalHandler_ if they serve your purpose.
+* SniProxy requires that the following paths at a minimum are locally handled - **"/authorizationError/"** and **"/requestUnauthorized/"**. You may choose to register the default implementations _DefaultAuthorizationErrorRedirectPathLocalHandler_ and _DefaultAuthorizationFailedRedirectPathLocalHandler_ if they serve your purpose.
 
 ## Usage
 
@@ -72,9 +72,9 @@
   * Alternatively, one can make use of the default local handler implementations -
   ```
   sniproxy.RegisterLocalHandler("myAuthorizationErrorLocalHandlerAlias",
-    &defaultAuthorizationErrorRedirectPathLocalHandler{})
+    &DefaultAuthorizationErrorRedirectPathLocalHandler{})
   sniproxy.RegisterLocalHandler("myAuthorizationFailureLocalHandlerAlias",
-    &defaultAuthorizationFailedRedirectPathLocalHandler{})
+    &DefaultAuthorizationFailedRedirectPathLocalHandler{})
   ```
 * Create an AuthToken implementation or use the provided one -
 ```

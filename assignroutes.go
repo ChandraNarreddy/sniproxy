@@ -52,18 +52,22 @@ var (
 	AuthorizationFailedRedirectPath = "/requestUnauthorized/"
 )
 
-type defaultAuthorizationErrorRedirectPathLocalHandler struct {
+//DefaultAuthorizationErrorRedirectPathLocalHandler to handle authorization errors
+type DefaultAuthorizationErrorRedirectPathLocalHandler struct {
 }
 
-func (c *defaultAuthorizationErrorRedirectPathLocalHandler) Handle(w http.ResponseWriter,
+//Handle handles authorization errors by returning a forbidden status
+func (c *DefaultAuthorizationErrorRedirectPathLocalHandler) Handle(w http.ResponseWriter,
 	r *http.Request) {
 	writeErrorResponse(w, http.StatusForbidden)
 }
 
-type defaultAuthorizationFailedRedirectPathLocalHandler struct {
+//DefaultAuthorizationFailedRedirectPathLocalHandler to handle authorization failures
+type DefaultAuthorizationFailedRedirectPathLocalHandler struct {
 }
 
-func (c *defaultAuthorizationFailedRedirectPathLocalHandler) Handle(w http.ResponseWriter,
+//Handle handles authorization failures and returns Unauthorized status
+func (c *DefaultAuthorizationFailedRedirectPathLocalHandler) Handle(w http.ResponseWriter,
 	r *http.Request) {
 	writeErrorResponse(w, http.StatusUnauthorized)
 }

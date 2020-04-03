@@ -1009,9 +1009,9 @@ func TestSniProxy(t *testing.T) {
 
 	//register the localhandlers
 	RegisterLocalHandler("defaultAuthorizationErrorLocalHandler",
-		&defaultAuthorizationErrorRedirectPathLocalHandler{})
+		&DefaultAuthorizationErrorRedirectPathLocalHandler{})
 	RegisterLocalHandler("defaultAuthorizationFailureLocalHandler",
-		&defaultAuthorizationFailedRedirectPathLocalHandler{})
+		&DefaultAuthorizationFailedRedirectPathLocalHandler{})
 
 	//create a new defaultAuthToken object here
 	defaultAuthToken := NewDefaultAuthToken("", nil)
