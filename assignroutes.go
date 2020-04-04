@@ -90,7 +90,7 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 		//first create a transport that is tolerant to SSL errors
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
-				Timeout:   5 * time.Second,
+				Timeout:   10 * time.Second,
 				KeepAlive: 30 * time.Second,
 			}).Dial,
 			TLSClientConfig: &tls.Config{
@@ -98,8 +98,8 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 			},
 			DisableKeepAlives:     false,
 			TLSHandshakeTimeout:   10 * time.Second,
-			ResponseHeaderTimeout: 10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			ResponseHeaderTimeout: 45 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
 			MaxIdleConnsPerHost:   10,
 			MaxIdleConns:          100,
 		},
@@ -110,7 +110,7 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 		},
 		//we will declare a reasonable timeout value here. Alternatively we
 		// can look to parameterize this to fetch its value from routeMap
-		Timeout: 15 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 
 	//let us now register the handlers iteratively for each HostMap entry
