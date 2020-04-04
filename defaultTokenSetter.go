@@ -57,7 +57,7 @@ func (c *defaultTokenSetter) SetToken(w http.ResponseWriter, r *http.Request,
 		cookie := &http.Cookie{
 			Name:     c.tokenName,
 			Value:    c.tokenValue,
-			Expires:  time.Now(),
+			Expires:  time.Now().Add(24 * 60 * time.Minute),
 			Secure:   true,
 			HttpOnly: true,
 			Path:     "/",
