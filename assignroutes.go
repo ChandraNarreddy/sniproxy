@@ -98,7 +98,7 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 			},
 			DisableKeepAlives:     false,
 			TLSHandshakeTimeout:   10 * time.Second,
-			ResponseHeaderTimeout: 45 * time.Second,
+			ResponseHeaderTimeout: 500 * time.Second,
 			ExpectContinueTimeout: 10 * time.Second,
 			MaxIdleConnsPerHost:   10,
 			MaxIdleConns:          100,
@@ -110,7 +110,7 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 		},
 		//we will declare a reasonable timeout value here. Alternatively we
 		// can look to parameterize this to fetch its value from routeMap
-		Timeout: 60 * time.Second,
+		Timeout: 150 * time.Second,
 	}
 
 	//let us now register the handlers iteratively for each HostMap entry
