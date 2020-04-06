@@ -93,8 +93,8 @@ func SniProxy(keyStoreFile *string, keyStorePass *string,
 
 	//Declare server properties
 	server := &http.Server{
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  50 * time.Second,
+		WriteTimeout: 600 * time.Second,
 		IdleTimeout:  30 * time.Second,
 		Addr:         *bindAddr,
 		TLSConfig: &tls.Config{
