@@ -215,13 +215,17 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 					resp, respErr := client.Do(req)
 					if respErr != nil {
 						log.Printf("Sniproxy error - Failure obtaining response from %s for inbound request %#v",
-							route, r.RequestURI)
+							uri, r.RequestURI)
 						writeErrorResponse(w, http.StatusBadRequest)
 						return
 					}
 					if writeResponse(w, r, resp, tokenSetter, localMap.TokenType) != nil {
 						writeErrorResponse(w, http.StatusInternalServerError)
+						resp.Body.Close()
+						return
 					}
+					resp.Body.Close()
+					return
 				})
 			//router.Handle ended
 		}
