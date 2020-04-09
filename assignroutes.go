@@ -159,8 +159,9 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 						return
 					}
 					//now add the query params from the original request as is
-					route = route + "?" + r.URL.RawQuery
-
+					if r.URL.RawQuery != "" {
+						route = route + "?" + r.URL.RawQuery
+					}
 					//now validate if the route is a valid URI
 					uri, parseErr := url.ParseRequestURI(route)
 					if parseErr != nil {
@@ -215,7 +216,7 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 					resp, respErr := client.Do(req)
 					if respErr != nil {
 						log.Printf("Sniproxy error - Failure obtaining response from %s for inbound request %#v",
-							uri, r.RequestURI)
+							req.URL.String(), r.RequestURI)
 						writeErrorResponse(w, http.StatusBadRequest)
 						return
 					}
