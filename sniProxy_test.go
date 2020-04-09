@@ -1070,7 +1070,7 @@ func TestSniProxy(t *testing.T) {
 		testURIMaps[200] = append(testURIMaps[200], "/google/wonderful")
 		testURIMaps[200] = append(testURIMaps[200], "/google/sniproxy")
 		testURIMaps[200] = append(testURIMaps[200], "/resource/behind/selfhandling/Authenticator")
-		testURIMaps[200] = append(testURIMaps[200], "/blindforwarder/https/www.google.com/")
+		testURIMaps[200] = append(testURIMaps[200], "/blindforwarder/https/www.google.com/?q=sniproxy")
 		testURIMaps[http.StatusForbidden] = append(testURIMaps[http.StatusForbidden], "/authorizationError/")
 		testURIMaps[http.StatusUnauthorized] = append(testURIMaps[http.StatusUnauthorized], "/requestUnauthorized/")
 		testURIMaps[404] = append(testURIMaps[404], "/pattern/not/caught/by/proxy")
@@ -1107,7 +1107,7 @@ func TestSniProxy(t *testing.T) {
 				}
 				testResponse, testResponseErr := testClient.Do(testReq)
 				if testResponseErr != nil {
-					t.Errorf("\nTest Request failed: %#v", testResponseErr)
+					t.Errorf("\nTest Request failed: %#v", testResponseErr.Error())
 				} else if testResponse.StatusCode != testStatus {
 					t.Errorf("\nTest failed as response code %#v did not match expected %#v for %#v",
 						testResponse.StatusCode, testStatus, testURI)
