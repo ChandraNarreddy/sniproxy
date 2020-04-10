@@ -16,6 +16,8 @@
 
 ## Usage
 
+* A full featured sniproxy implementation making use of Google's OpenIDC as an authentication provider is provided in the [example](https://github.com/ChandraNarreddy/sniproxy/tree/master/example) directory. This implementation can be used to deploy a minimalistic zero-trust beyond-corp proxy for authenticating remote users using Google OpenIDC to allow access to corporate assets without any VPN.
+
 * Create an authenticator that satisfies the [Authenticator](https://github.com/ChandraNarreddy/sniproxy/blob/master/authenticator.go) interface and register it with the pool of authenticators available for SniProxy.
 ```
   import "github.com/ChandraNarreddy/sniproxy"
@@ -43,7 +45,12 @@
   sniproxy.RegisterAuthenticator("myAuthenticatorAlias", &myAuthenticator{})
   sniproxy.RegisterAuthenticator("myPassthroughAuthenticatorAlias", &myAuthenticator{})
 ```
-* Register localhandlers for paths **"/authorizationError/"** and **"/requestUnauthorized/"** on each served host. These handlers should implement the [LocalHandler](https://github.com/ChandraNarreddy/sniproxy/blob/master/assignroutes.go) interface.
+* Register localhandlers for paths **"/authorizationError/"** and **"/requestUnauthorized/"** on each served host or override these paths for convenient global endpoints by overriding the paths as -
+```
+sniproxy.AuthorizationErrorRedirectPath = "https://proxyhostname/authorizationError"
+sniproxy.AuthorizationFailedRedirectPath = "https://proxyhostname/requestUnauthorized"
+```
+These handlers should implement the [LocalHandler](https://github.com/ChandraNarreddy/sniproxy/blob/master/assignroutes.go) interface.
 ```
   type myAuthorizationErrorLocalHandler struct {
   }
@@ -85,7 +92,45 @@
   authChecker := sniproxy.NewDefaultAuthChecker(defaultAuthToken)
 ```
 * The defaultAuthChecker uses the [defaultTokenSetter](https://github.com/ChandraNarreddy/sniproxy/blob/master/defaultTokenSetter.go) implementation. One can use a custom [TokenSettter](https://github.com/ChandraNarreddy/sniproxy/blob/master/tokenSetter.go) implementation though.
-* Next, create the necessary proxy configuration and save it, say "sniproxy_routes.json". Use the localhandlers aliases and authenticator schema aliases correctly -
+* Next, we need to define routes. Routes are defined as JSON arrays and are composed of 'Host' to RoutePaths combinations. The 'Host' corresponds to the 'Host' header value of an incoming request. Please note that SniProxy cannot override an inbound request's method when it proxies a request. The Method and Path attributes act as filters to capture inbound requests.
+SniProxy uses [httprouter](https://github.com/julienschmidt/httprouter) under the hood and requires the path element to be defined using HTTPRouter's syntax.
+```
+  "Host":"www.mymainhostname",
+  "MethodPathMaps": [
+    {
+      "Method":
+      "Path" :
+      "Route" :
+      "AuthenticatorScheme":
+      "TokenType" :
+    }
+  ]
+```
+##### Incoming Path
+The Route attribute needs an array composed of a combination of strings and numbers in the exact sequence that makes up the proxy path for inbound request. The numbers (indexed from 0) correspond to respective parameter values that SniProxy extracts based on the Path that you defined for the route. SniProxy does a plain concatenation in order as defined in the sequence and constructs the proxy path it needs to follow. Please note that SniProxy does a URL escape over parameters it extracts from the incoming request before composing the proxy path. String values defined in the Route attribute are not escaped.
+```
+  "Path"  : "/blindforwarder/:scheme/:hostname/*end",
+  "Route" : [ 0, "://", 1, "/", 2 ],
+```
+The above configuration instructs SniProxy to forward a requests for `/blindforwarder/http/www.myhostname.com/getweather?forCity=mayhem` to `http://www.myhostname.com/getweather?forCity=mayhem`
+##### Incoming Query Params
+Any incoming Query parameters are added as they are at the end of the path constructed.
+##### AuthenticatorScheme
+AuthenticatorScheme for each MethodPathMap needs to be defined and should have been registered in the registry.
+```
+  "AuthenticatorScheme": "myAuthenticator",
+```
+##### TokenType
+TokenTypes that a particular request needs verified for. One can implement the [TokenSetter](https://github.com/ChandraNarreddy/sniproxy/blob/master/tokenSetter.go) interface to support custom TokenTypes.
+```
+"TokenType": "Cookie"
+```
+##### LocalHandlers
+Any localhandlers that SniProxy needs to take note of should go in as routes in this pattern `[-1, "localHandlerRegistryName"]`. You have the flexibility to register the local handlers at the proxy level or at each individual host level by flipping the _DefaultAuthorizationErrorRedirectPathLocalHandler_ and _DefaultAuthorizationFailedRedirectPathLocalHandler_ values. By default, SniProxy defines them as relative paths for each host but it is easy to override them to global proxy level endpoints.
+```
+  "Route" : [-1, "myAuthorizationErrorLocalHandlerAlias"]
+```
+Create the necessary proxy configuration and save it, say "sniproxy_routes.json".
 ```
   {	"Routes":[
                 {
@@ -150,7 +195,7 @@
                 ]
     }
 ```
-* Create the keystore for all the hosts that the proxy needs to terminate TLS for
+* Generate the keystore for all the hosts that the proxy needs to terminate TLS connections.
 ```
   import "github.com/ChandraNarreddy/sniproxy/utility"
 
@@ -198,6 +243,11 @@
 
   //do the above for each additional host
 ```
+Alternatively, you can make use of the CLI by building [siillyproxy](https://github.com/ChandraNarreddy/sillyproxy) for your platform and generate the keystore like so -
+```
+./sillyProxy -keystore myKeyStore.ks -pemCert certificatteFile -pemKey pvtKeyFile -keypass changeme -hostname myExternalDomainName KeyStore
+```
+More [here](https://github.com/ChandraNarreddy/sillyproxy#generating-the-keystore)
 * Now invoke sniproxy -
 ```
   //specify the TLS version the proxy should run against, recommended - 3

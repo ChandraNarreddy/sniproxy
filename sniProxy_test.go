@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ChandraNarreddy/sniproxy/utility"
+	"github.com/ChandraNarreddy/sillyproxy/utility"
 	"github.com/julienschmidt/httprouter"
 	keystore "github.com/pavel-v-chernykh/keystore-go"
 )
