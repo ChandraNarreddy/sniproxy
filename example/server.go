@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"./authenticators"
 	"github.com/ChandraNarreddy/sniproxy"
+	"github.com/ChandraNarreddy/sniproxy/example/authenticators"
 )
 
 var (
