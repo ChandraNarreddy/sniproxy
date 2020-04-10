@@ -1,0 +1,44 @@
+{	"Routes":
+  [
+    {
+      "Host":"HostName.YouWantToProxy.For",
+      "MethodPathMaps":
+      [
+				{
+          "Method": "GET",
+          "Path"  : "/*end",
+          "Route" : [ "YourScheme://In.bound.Addr/", 0 ],
+					"AuthenticatorScheme": "googleAuth",
+					"TokenType": "Cookie"
+        },
+        {
+          "Method": "POST",
+          "Path"  : "/*end",
+          "Route" : [ "YourScheme://In.bound.Addr/", 0 ],
+					"AuthenticatorScheme": "googleAuth",
+					"TokenType": "Cookie"
+        }
+      ]
+    },
+    {
+      "Host":"myproxy.domain.com",
+      "MethodPathMaps":
+      [
+				{
+					"Method": "GET",
+					"Path"  : "/authorizationError",
+					"Route" : [-1, "defaultAuthorizationErrorLocalHandler"],
+					"AuthenticatorScheme": "passthrough",
+					"TokenType": "Cookie"
+				},
+				{
+					"Method": "GET",
+					"Path"  : "/requestUnauthorized",
+					"Route" : [-1, "defaultAuthorizationFailureLocalHandler"],
+					"AuthenticatorScheme": "passthrough",
+					"TokenType": "Cookie"
+				}
+      ]
+    }
+	]
+}
