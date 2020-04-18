@@ -188,13 +188,13 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 						if authCheckErr != nil {
 							//we have to redirect the user here because the other static
 							//resources will get loaded otherwise
-							http.Redirect(w, r, AuthorizationErrorRedirectPath, http.StatusTemporaryRedirect)
+							http.Redirect(w, r, AuthorizationErrorRedirectPath, http.StatusFound)
 							return
 						}
 						if !callerAuthorized {
 							//we have to redirect the user here because the other static
 							//resources will get loaded otherwise
-							http.Redirect(w, r, AuthorizationFailedRedirectPath, http.StatusTemporaryRedirect)
+							http.Redirect(w, r, AuthorizationFailedRedirectPath, http.StatusFound)
 							return
 						}
 					}

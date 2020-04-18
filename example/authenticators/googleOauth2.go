@@ -174,7 +174,7 @@ func (c *googleOauth) Authenticate(r *http.Request,
 			Path:     "/",
 		}
 		http.SetCookie(w, oAuthCookie)
-		http.Redirect(w, r, baseURL.String(), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, baseURL.String(), http.StatusFound)
 		return "", true, nil
 	}
 	// if the user has come to any other destination, check first if there is a
