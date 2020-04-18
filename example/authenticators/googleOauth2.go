@@ -174,7 +174,7 @@ func (c *googleOauth) Authenticate(r *http.Request,
 			Path:     "/",
 		}
 		http.SetCookie(w, oAuthCookie)
-		http.Redirect(w, r, baseURL.String(), http.StatusMovedPermanently)
+		http.Redirect(w, r, baseURL.String(), http.StatusTemporaryRedirect)
 		return "", true, nil
 	}
 	// if the user has come to any other destination, check first if there is a
@@ -221,7 +221,7 @@ func (c *googleOauth) Authenticate(r *http.Request,
 	}
 
 	encodedState := base64.RawURLEncoding.EncodeToString(encryptedState)
-	http.Redirect(w, r, c.getAuthCodeURL(encodedState), http.StatusMovedPermanently)
+	http.Redirect(w, r, c.getAuthCodeURL(encodedState), http.StatusTemporaryRedirect)
 	return "", true, nil
 }
 
