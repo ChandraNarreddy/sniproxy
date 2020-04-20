@@ -926,12 +926,9 @@ func TestDefaultAuthToken(t *testing.T) {
 
 	expiredToken, _ := authTokenWithDefaults.TokenMaker(testReq, "sniTestUser4",
 		time.Unix(0, 0), "AuthScheme4", HEADER)
-	valid3, _, err6 := authTokenWithDefaults.Validate(expiredToken, "AuthScheme4")
+	valid3, _, _ := authTokenWithDefaults.Validate(expiredToken, "AuthScheme4")
 	if valid3 {
 		t.Errorf("\nDefaultAuthToken.Validate() failed to invalidate an expired token")
-	}
-	if err6 == nil {
-		t.Errorf("\nDefaultAuthToken.Validate() failed to throw error for an expired token")
 	}
 
 	testReq.Header.Set(DefaultAuthTokenName, testToken3)
