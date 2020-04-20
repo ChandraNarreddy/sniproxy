@@ -77,25 +77,27 @@ func (c *defaultAuthToken) GetTokenName() string {
 func (c *defaultAuthToken) Validate(base64EncodedToken string, authScheme string) (bool, string, error) {
 	tokenValue, decodeErr := base64.StdEncoding.DecodeString(base64EncodedToken)
 	if decodeErr != nil {
+		log.Printf("Sniproxy error - Failed to decode a token value")
 		return false, "", decodeErr
 	}
 	plainBytes, failure := c.siv.Unwrap(tokenValue)
 	if failure != nil {
+		log.Printf("Sniproxy error - Failed to unwrap a token value")
 		return false, "", DefaultAuthCheckerTokenValidationErr
 	}
 	var readIntoAuthToken map[string]token
 	if unMarshallErr := msgpack.Unmarshal(plainBytes, &readIntoAuthToken); unMarshallErr != nil {
-		log.Printf("Sniproxy error - Unmarshalling of the token %#v failed - %#v", tokenValue, unMarshallErr)
+		log.Printf("Sniproxy error - Unmarshalling of a token failed")
 		return false, "", DefaultAuthCheckerErr
 	}
 	var token token
 	var ok bool
 	if token, ok = readIntoAuthToken[authScheme]; !ok {
+		log.Printf("Sniproxy debug - Token for authscheme %s not found", authScheme)
 		return false, "", nil
 	}
 	if time.Now().UnixNano() > token.NotValidAfter {
-		return false, token.Identifier,
-			DefaultAuthCheckerTokenExpiredErr
+		return false, token.Identifier, nil
 	}
 	return true, token.Identifier, nil
 }
