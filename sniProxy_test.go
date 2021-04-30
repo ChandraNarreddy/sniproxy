@@ -23,7 +23,7 @@ import (
 
 	"github.com/ChandraNarreddy/sillyproxy/utility"
 	"github.com/julienschmidt/httprouter"
-	keystore "github.com/pavel-v-chernykh/keystore-go"
+	keystore "github.com/pavel-v-chernykh/keystore-go/v4"
 )
 
 const (
@@ -392,7 +392,7 @@ var (
 	KeyStore              = "test.keystore"
 	alias_default         = "default"
 	alias                 = "localhost"
-	KeyStorePass          = "test"
+	KeyStorePass          = "test12331"
 	Addr                  = "127.0.0.1:8444"
 	RouteMapFilePath      = "test_routemap.json"
 	BenchRouteMapFilePath = "bench_routemap.json"
@@ -515,7 +515,7 @@ func resetParams() {
 	KeyStore = "test.keystore"
 	alias_default = "default"
 	alias = "localhost"
-	KeyStorePass = "test"
+	KeyStorePass = "test12331"
 	Addr = "127.0.0.1:8444"
 	RouteMapFilePath = "test_routemap.json"
 	BenchRouteMapFilePath = "test_routemap.json"
@@ -697,7 +697,11 @@ func TestReloadCertMap(t *testing.T) {
 
 func TestAliasExists(t *testing.T) {
 	f, _ := os.Open(KeyStore)
-	keyStore, _ := keystore.Decode(f, []byte(KeyStorePass))
+	keyStore := keystore.New(keystore.WithCaseExactAliases())
+	err := keyStore.Load(f, []byte(KeyStorePass))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if !aliasExists(&keyStore, "default:ECDSA") {
 		t.Errorf("aliasExists() fail: failed to locate existing alias.")
 	}
