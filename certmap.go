@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	keystore "github.com/pavel-v-chernykh/keystore-go"
+	keystore "github.com/pavel-v-chernykh/keystore-go/v4"
 )
 
 //certMap is a map of aliases and certificates in the form ("w.a.p:ECDSA",cert)
@@ -34,7 +34,8 @@ func loadCertMap(filePtr *string, password []byte,
 		err = errors.New("loadKeyStore failed with error: " + fmt.Sprintf("%v", err))
 		return err
 	}
-	keyStore, err := keystore.Decode(f, password)
+	keyStore := keystore.New(keystore.WithCaseExactAliases())
+	err = keyStore.Load(f, password)
 	if err != nil {
 		err = errors.New("loadKeyStore failed with error: " + fmt.Sprintf("%v", err))
 		return err
@@ -49,27 +50,33 @@ func loadCertMap(filePtr *string, password []byte,
 		return fmt.Errorf("No certificate exists with \"default\" alias. " +
 			"Please load a cert with default alias into the keystore")
 	}
-
-	for k, v := range keyStore {
-		certChain := v.(*keystore.PrivateKeyEntry).CertificateChain
+	aliases := keyStore.Aliases()
+	for _, alias := range aliases {
+		entry, getPrivateKeyEntryErr := keyStore.GetPrivateKeyEntry(alias, password)
+		if getPrivateKeyEntryErr != nil {
+			return fmt.Errorf("Failed to fetch a private key entry for alias %v", alias)
+		}
+		certChain := entry.CertificateChain
 		var keyPEMBlock []byte
 		var keyDERBlock *pem.Block
 		cert := tls.Certificate{}
 		if len(certChain) == 0 {
-			log.Printf("Sniproxy error - PrivateKeyEntry for alias %s does not contain a certificate chain", k)
+			log.Printf("Sniproxy error - PrivateKeyEntry for alias %s does not "+
+				"contain a certificate chain", alias)
 		} else {
 			for i := 0; i < len(certChain); i++ {
 				cert.Certificate = append(cert.Certificate, certChain[i].Content)
 			}
-			keyPEMBlock = v.(*keystore.PrivateKeyEntry).PrivateKey
+			keyPEMBlock = entry.PrivateKey
 			keyDERBlock, _ = pem.Decode(keyPEMBlock)
 			cert.PrivateKey, err = parsePrivateKey(keyDERBlock.Bytes)
 			if err != nil {
-				log.Printf("Sniproxy error - Privatekey load failed for for alias %s", k)
+				log.Printf("Sniproxy error - Privatekey load failed for for alias %s",
+					alias)
 			} else {
 
-				if strings.HasPrefix(k, "default") {
-					if strings.HasSuffix(k, ":ECDSA") {
+				if strings.HasPrefix(alias, "default") {
+					if strings.HasSuffix(alias, ":ECDSA") {
 						ECDSAdefaultExists = true
 						*ECDSAdefault = cert
 					} else {
@@ -77,7 +84,7 @@ func loadCertMap(filePtr *string, password []byte,
 						*RSAdefault = cert
 					}
 				} else {
-					(*certMap)[k] = cert
+					(*certMap)[alias] = cert
 				}
 			}
 			zeroBytes(keyPEMBlock)
@@ -108,7 +115,7 @@ func reloadCertMap(filePtr *string, password []byte,
 }
 
 func aliasExists(keyStore *keystore.KeyStore, alias string) bool {
-	if _, exists := (*keyStore)[alias]; exists {
+	if exists := keyStore.IsPrivateKeyEntry(alias); exists {
 		return true
 	}
 	return false
