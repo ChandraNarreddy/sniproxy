@@ -89,7 +89,7 @@ func (c *defaultAuthChecker) CheckAuth(r *http.Request, w http.ResponseWriter,
 		//let's get rid of the authtokenheader here
 		r.Header.Del(c.authToken.GetTokenName())
 		//let's add the caller's identity to the request here
-		r.Header.Set("X-Forwarded-For", caller)
+		r.Header.Set("X-AuthIdentity", caller)
 		return true, nil, false, nil
 	case EITHER:
 		//check whether cookie value in the request matches up to the authTokenName
