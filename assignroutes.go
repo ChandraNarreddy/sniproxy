@@ -211,7 +211,32 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 						req.Header.Add(requestHeaderKey, requestHeaderValue)
 					}
 					//set a tracer ID here for the request
-					req.Header.Set("X-Forwarded-By", "SniProxy_"+strconv.FormatInt(time.Now().UnixNano(), 10))
+					tracer := "SniProxy_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+					req.Header.Set("Via", r.Proto+tracer)
+
+					//set/append the X-Forwarded-For header here
+					xForwardedFor := r.Header.Get("X-Forwarded-For")
+					remoteAddr := strings.Split(r.RemoteAddr, ":")[0]
+					if xForwardedFor == "" {
+						xForwardedFor = remoteAddr
+					} else {
+						xForwardedFor = xForwardedFor + ", " + remoteAddr
+					}
+					req.Header.Set("X-Forwarded-For", xForwardedFor)
+
+					//set the X-Forwarded-Host header here if already not present
+					xForwardedHost := r.Header.Get("X-Forwarded-Host")
+					if xForwardedHost == "" {
+						xForwardedHost = strings.Split(r.Host, ":")[0]
+						req.Header.Set("X-Forwarded-Host", xForwardedHost)
+					}
+
+					//set the X-Forwarded-Proto header here if already not present
+					xForwardedProto := r.Header.Get("X-Forwarded-Proto")
+					if xForwardedProto == "" {
+						xForwardedProto = r.Proto
+						req.Header.Set("X-Forwarded-Proto", xForwardedProto)
+					}
 
 					resp, respErr := client.Do(req)
 					if respErr != nil {
