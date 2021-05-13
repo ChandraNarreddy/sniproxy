@@ -213,14 +213,9 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 					//create a new HTTP request
 					req, _ := http.NewRequest(localMap.Method, uri.String(), r.Body)
 
-					//declare an ignoreHeaders list
-					ignoreHeaders := HopByHopHeaders
-					var emptyStruct struct{}
-					ignoreHeaders["Host"] = emptyStruct
-
 					// add all end to end headers from incoming request to the outgoing
 					for requestHeaderKey, requestHeaderValues := range r.Header {
-						if _, ok := ignoreHeaders[requestHeaderKey]; !ok {
+						if _, ok := HopByHopHeaders[requestHeaderKey]; !ok {
 							requestHeaderValue := requestHeaderValues[0]
 							for i := 1; i < len(requestHeaderValues); i++ {
 								requestHeaderValue = requestHeaderValue + "," + requestHeaderValues[i]
