@@ -32,8 +32,8 @@
 	                                    },
 	                                    {
 	                                      "Method": "GET",
-	                                      "Path"  : "/google/*query",
-	                                      "Route" : ["https://www.google.com/search?q=", 0],
+	                                      "Path"  : "/search/*query",
+	                                      "Route" : ["http://localhost:64431/search?q=", 0],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "Cookie"
 	                                    },
@@ -47,7 +47,7 @@
 	                                    {
 	                                      "Method": "GET",
 	                                      "Path"  : "/redirect/",
-	                                      "Route" : ["http://outlook.live.com/mail/"],
+	                                      "Route" : ["http://localhost:64431/redirect/"],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "Either"
 	                                    },
@@ -61,21 +61,21 @@
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/authFailure/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testFail",
 																				"TokenType": "Either"
 	                                    },
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/WrongTokenType/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testFail",
 																				"TokenType": "Neither"
 	                                    },
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/AuthCheckError/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testAuthCheckError",
 																				"TokenType": "Neither"
 	                                    },
@@ -103,8 +103,15 @@
 																			{
 																				"Method": "GET",
 	                                      "Path"  : "/resource/behind/selfhandling/Authenticator",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "requestFulfilling",
+																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "GET",
+	                                      "Path"  : "/x-forwarded/*param",
+	                                      "Route" : ["http://localhost:64431/",0],
+																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
 																			}
 	                                  ]

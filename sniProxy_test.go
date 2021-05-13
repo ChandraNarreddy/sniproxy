@@ -1,6 +1,7 @@
 package sniproxy
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -18,6 +19,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -69,8 +72,8 @@ const (
 	                                    },
 	                                    {
 	                                      "Method": "GET",
-	                                      "Path"  : "/google/*query",
-	                                      "Route" : ["https://www.google.com/search?q=", 0],
+	                                      "Path"  : "/search/*query",
+	                                      "Route" : ["http://localhost:64431/search?q=", 0],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "Cookie"
 	                                    },
@@ -84,7 +87,7 @@ const (
 	                                    {
 	                                      "Method": "GET",
 	                                      "Path"  : "/redirect/",
-	                                      "Route" : ["http://outlook.live.com/mail/"],
+	                                      "Route" : ["http://localhost:64431/redirect/"],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "Either"
 	                                    },
@@ -98,21 +101,21 @@ const (
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/authFailure/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testFail",
 																				"TokenType": "Either"
 	                                    },
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/WrongTokenType/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testFail",
 																				"TokenType": "Neither"
 	                                    },
 																			{
 	                                      "Method": "GET",
 	                                      "Path"  : "/AuthCheckError/",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "testAuthCheckError",
 																				"TokenType": "Neither"
 	                                    },
@@ -140,8 +143,15 @@ const (
 																			{
 																				"Method": "GET",
 	                                      "Path"  : "/resource/behind/selfhandling/Authenticator",
-	                                      "Route" : ["https://www.google.com/"],
+	                                      "Route" : ["http://localhost:64431/"],
 																				"AuthenticatorScheme": "requestFulfilling",
+																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "GET",
+	                                      "Path"  : "/x-forwarded/*param",
+	                                      "Route" : ["http://localhost:64431/",0],
+																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
 																			}
 	                                  ]
@@ -713,10 +723,6 @@ func TestAliasExists(t *testing.T) {
 	}
 }
 
-func TestParsePrivateKey(t *testing.T) {
-
-}
-
 func TestReturnCert(t *testing.T) {
 	server, _ := net.Pipe()
 	defer server.Close()
@@ -836,10 +842,6 @@ func TestBuildRouteMap(t *testing.T) {
 	}
 }
 
-func TestAssignRoutes(t *testing.T) {
-
-}
-
 func TestProxyHandlerMapServeHTTP(t *testing.T) {
 	testpHMap := make(proxyHanlderMap)
 	testRouter := httprouter.New()
@@ -955,7 +957,37 @@ func TestDefaultAuthToken(t *testing.T) {
 		t.Errorf("\nDefaultAuthToken.TokenMaker() failed while creating a token for" +
 			"EITHER TokenType with COOKIE alone present in the request")
 	}
+}
 
+func startTargetServer(port string, wg *sync.WaitGroup) *http.Server {
+	targetServer := &http.Server{
+		Addr: "localhost:" + port,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if strings.Contains(req.URL.Path, "redirect") {
+				http.Redirect(w, req, "/search", http.StatusFound)
+			} else if strings.Contains(req.URL.Path, "search") {
+				w.WriteHeader(200)
+				io.WriteString(w, "hello")
+			} else if strings.Contains(req.URL.Path, "x-forwarded-host") {
+				w.WriteHeader(200)
+				io.WriteString(w, req.Header.Get("X-Forwarded-Host"))
+			} else if strings.Contains(req.URL.Path, "x-forwarded-for") {
+				w.WriteHeader(200)
+				io.WriteString(w, req.Header.Get("X-Forwarded-For"))
+			} else if strings.Contains(req.URL.Path, "x-forwarded-proto") {
+				w.WriteHeader(200)
+				io.WriteString(w, req.Header.Get("X-Forwarded-Proto"))
+			}
+		}),
+	}
+	go func() {
+		defer wg.Done()
+		if err := targetServer.ListenAndServe(); err != http.ErrServerClosed {
+			// unexpected error. port in use?
+			log.Fatalf("Failed to run targetServer - %v", err)
+		}
+	}()
+	return targetServer
 }
 
 type testSuccessAuthenticator struct {
@@ -1047,6 +1079,11 @@ func TestSniProxy(t *testing.T) {
 		testServer.StartTLS()
 		defer testServer.Close()
 		//log.Printf("\nTest log - Test server URL:%#v", testServer.URL+"/wild/qssum/index.html")
+		targetServerExitDone := &sync.WaitGroup{}
+		targetServerExitDone.Add(1)
+		targetServer := startTargetServer("64431", targetServerExitDone)
+
+		//setting up client now
 		jar, err := cookiejar.New(nil)
 		if err != nil {
 			log.Fatalf("cookieJar could not initialize - %v", err)
@@ -1068,14 +1105,14 @@ func TestSniProxy(t *testing.T) {
 			Timeout: 5 * time.Second,
 		}
 		testURIMaps := make(map[int][]string)
-		testURIMaps[200] = append(testURIMaps[200], "/google/wonderful")
-		testURIMaps[200] = append(testURIMaps[200], "/google/sniproxy")
+		testURIMaps[200] = append(testURIMaps[200], "/search/wonderful")
+		testURIMaps[200] = append(testURIMaps[200], "/search/sniproxy")
 		testURIMaps[200] = append(testURIMaps[200], "/resource/behind/selfhandling/Authenticator")
-		testURIMaps[200] = append(testURIMaps[200], "/blindforwarder/https/www.google.com/?q=sniproxy")
+		testURIMaps[200] = append(testURIMaps[200], "/blindforwarder/http/localhost:64431/?q=sniproxy")
 		testURIMaps[http.StatusForbidden] = append(testURIMaps[http.StatusForbidden], "/authorizationError/")
 		testURIMaps[http.StatusUnauthorized] = append(testURIMaps[http.StatusUnauthorized], "/requestUnauthorized/")
 		testURIMaps[404] = append(testURIMaps[404], "/pattern/not/caught/by/proxy")
-		testURIMaps[301] = append(testURIMaps[301], "/redirect/")
+		testURIMaps[302] = append(testURIMaps[302], "/redirect/")
 		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/wild/notexistingdomain/validPathButNotExistingDownstream")
 		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/failureCase/RoutePathIncorrect")
 		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/invalid/")
@@ -1118,8 +1155,53 @@ func TestSniProxy(t *testing.T) {
 			}
 		}
 
+		xForwardedTestVectors := []string{"x-forwarded-for", "x-forwarded-host", "x-forwarded-proto"}
+		for index, param := range xForwardedTestVectors {
+			testURI := "/x-forwarded/" + param
+			testReq, _ := http.NewRequest(http.MethodGet,
+				testServer.URL+testURI, nil)
+			testServerURL, _ := url.Parse(testServer.URL)
+			jar.SetCookies(testServerURL, []*http.Cookie{&http.Cookie{
+				Name:  "DummyCookie",
+				Value: "123456",
+			}})
+			testToken, _ := defaultAuthToken.TokenMaker(testReq, "sniTestUser",
+				time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+				"testPass", EITHER)
+			testCookie := &http.Cookie{
+				Name:  DefaultAuthTokenName,
+				Value: testToken,
+			}
+			//lets add the cookie here now
+			if index > 0 {
+				jar.SetCookies(testServerURL, []*http.Cookie{testCookie})
+				testReq.Header.Set(DefaultAuthTokenName, testToken)
+			}
+			testResponse, testResponseErr := testClient.Do(testReq)
+			if testResponseErr != nil {
+				t.Errorf("\nTest Request Failed : %#v", testResponseErr.Error())
+			}
+			testRespBodyBytes, _ := ioutil.ReadAll(testResponse.Body)
+			testResponseBodyString := fmt.Sprintf("%s", testRespBodyBytes)
+			if param == "X-Forwarded-Proto" && testResponseBodyString != testReq.Proto {
+				t.Errorf("\nTest failed as X-Forwarded-Proto value %#v did not match expected %#v for %#v",
+					testResponseBodyString, testReq.Proto, testURI)
+			}
+			if param == "X-Forwarded-For" &&
+				testResponseBodyString != "127.0.0.1" {
+				t.Errorf("\nTest failed as X-Forwarded-For value %#v did not match expected %#v for %#v",
+					testResponseBodyString, "127.0.0.1", testURI)
+			}
+			if param == "X-Forwarded-Host" && testResponseBodyString != testReq.Host {
+				t.Errorf("\nTest failed as X-Forwarded-Host value %#v did not match expected %#v for %#v",
+					testResponseBodyString, testReq.Host, testURI)
+			}
+			testResponse.Body.Close()
+		}
+
+		targetServer.Shutdown(context.Background())
+		targetServerExitDone.Wait()
 	}
-	//syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }
 
 func BenchmarkSniProxy(b *testing.B) {

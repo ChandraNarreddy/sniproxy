@@ -18,11 +18,13 @@ func writeErrorResponse(w http.ResponseWriter, status int) error {
 func writeResponse(w http.ResponseWriter, r *http.Request, resp *http.Response,
 	tokenSetter TokenSetter, tokenType string) error {
 	for responseHeaderkey, responseHeaderValues := range resp.Header {
-		responseHeaderValue := responseHeaderValues[0]
-		for i := 1; i < len(responseHeaderValues); i++ {
-			responseHeaderValue = responseHeaderValue + "," + responseHeaderValues[i]
+		if _, ok := HopByHopHeaders[responseHeaderkey]; !ok {
+			responseHeaderValue := responseHeaderValues[0]
+			for i := 1; i < len(responseHeaderValues); i++ {
+				responseHeaderValue = responseHeaderValue + "," + responseHeaderValues[i]
+			}
+			w.Header().Add(responseHeaderkey, responseHeaderValue)
 		}
-		w.Header().Add(responseHeaderkey, responseHeaderValue)
 	}
 	if tokenSetter != nil {
 		tokenSetter.SetToken(w, r, tokenType)
