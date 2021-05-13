@@ -21,6 +21,17 @@ var (
 	localHandlers   = make(map[string]LocalHandler)
 )
 
+var HopByHopHeaders = map[string]struct{}{
+	"Connection":          {},
+	"Keep-Alive":          {},
+	"Proxy-Authenticate":  {},
+	"Proxy-Authorization": {},
+	"TE":                  {},
+	"Trailer":             {},
+	"Transfer-Encoding":   {},
+	"Upgrade":             {},
+}
+
 //LocalHandler is a generic interface for implementations to satisfy as a stand-in for it.
 type LocalHandler interface {
 	//Handle handles the request and responds back on the writer
@@ -202,14 +213,24 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 					//create a new HTTP request
 					req, _ := http.NewRequest(localMap.Method, uri.String(), r.Body)
 
-					// add all the headers from incoming request to the outgoing
+					//declare an ignoreHeaders list
+					ignoreHeaders := HopByHopHeaders
+					var emptyStruct struct{}
+					ignoreHeaders["Host"] = emptyStruct
+
+					// add all end to end headers from incoming request to the outgoing
 					for requestHeaderKey, requestHeaderValues := range r.Header {
-						requestHeaderValue := requestHeaderValues[0]
-						for i := 1; i < len(requestHeaderValues); i++ {
-							requestHeaderValue = requestHeaderValue + "," + requestHeaderValues[i]
+						if _, ok := ignoreHeaders[requestHeaderKey]; !ok {
+							requestHeaderValue := requestHeaderValues[0]
+							for i := 1; i < len(requestHeaderValues); i++ {
+								requestHeaderValue = requestHeaderValue + "," + requestHeaderValues[i]
+							}
+							req.Header.Add(requestHeaderKey, requestHeaderValue)
 						}
-						req.Header.Add(requestHeaderKey, requestHeaderValue)
 					}
+					//reset the Host header to what we saw in the original request
+					req.Host = r.Host
+
 					//set a tracer ID here for the request
 					tracer := "SniProxy_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 					req.Header.Set("Via", r.Proto+tracer)
