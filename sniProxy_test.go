@@ -153,6 +153,13 @@ const (
 	                                      "Route" : ["http://localhost:64431/",0],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "GET",
+	                                      "Path"  : "/x-authidentity/",
+	                                      "Route" : ["http://localhost:64431/x-authidentity"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER"
 																			}
 	                                  ]
 	                }
@@ -977,6 +984,9 @@ func startTargetServer(port string, wg *sync.WaitGroup) *http.Server {
 			} else if strings.Contains(req.URL.Path, "x-forwarded-proto") {
 				w.WriteHeader(200)
 				io.WriteString(w, req.Header.Get("X-Forwarded-Proto"))
+			} else if strings.Contains(req.URL.Path, "x-authidentity") {
+				w.WriteHeader(200)
+				io.WriteString(w, req.Header.Get("X-AuthIdentity"))
 			}
 		}),
 	}
@@ -1144,7 +1154,8 @@ func TestSniProxy(t *testing.T) {
 					testReq.Header.Set(DefaultAuthTokenName, testToken)
 				}
 				testResponse, testResponseErr := testClient.Do(testReq)
-				if testResponseErr != nil {
+				if testResponseErr != nil &&
+					!(strings.Contains(testResponseErr.Error(), "context deadline exceeded")) {
 					t.Errorf("\nTest Request failed: %#v", testResponseErr.Error())
 				} else if testResponse.StatusCode != testStatus {
 					t.Errorf("\nTest failed as response code %#v did not match expected %#v for %#v",
@@ -1155,7 +1166,10 @@ func TestSniProxy(t *testing.T) {
 			}
 		}
 
-		xForwardedTestVectors := []string{"x-forwarded-for", "x-forwarded-host", "x-forwarded-proto"}
+		xForwardedTestVectors := []string{"x-forwarded-for",
+			"x-forwarded-host",
+			"x-forwarded-proto",
+		}
 		for index, param := range xForwardedTestVectors {
 			testURI := "/x-forwarded/" + param
 			testReq, _ := http.NewRequest(http.MethodGet,
@@ -1197,6 +1211,35 @@ func TestSniProxy(t *testing.T) {
 					testResponseBodyString, testReq.Host, testURI)
 			}
 			testResponse.Body.Close()
+		}
+		xAuthIdentityTestURI := "/x-authidentity/"
+		xAuthIdentityTestReq, _ := http.NewRequest(http.MethodGet,
+			testServer.URL+xAuthIdentityTestURI, nil)
+		xAuthIdentityTestServerURL, _ := url.Parse(testServer.URL)
+		jar.SetCookies(xAuthIdentityTestServerURL, []*http.Cookie{&http.Cookie{
+			Name:  "DummyCookie",
+			Value: "123456",
+		}})
+		xAuthIdentityTestToken, _ := defaultAuthToken.TokenMaker(xAuthIdentityTestReq, "sniTestUser",
+			time.Now().Add(DefaultAuthTokenExpirationDurationInHours*time.Hour),
+			"testPass", EITHER)
+		xAuthIdentityTestCookie := &http.Cookie{
+			Name:  DefaultAuthTokenName,
+			Value: xAuthIdentityTestToken,
+		}
+		jar.SetCookies(xAuthIdentityTestServerURL, []*http.Cookie{xAuthIdentityTestCookie})
+		xAuthIdentityTestReq.Header.Set(DefaultAuthTokenName, xAuthIdentityTestToken)
+		xAuthIdentityTestResponse, xAuthIdentityTestResponseErr := testClient.
+			Do(xAuthIdentityTestReq)
+		if xAuthIdentityTestResponseErr != nil {
+			t.Errorf("\nTest Request Failed for X-AuthIdentity Header : %#v",
+				xAuthIdentityTestResponseErr.Error())
+		}
+		xAuthIdentityTestRespBodyBytes, _ := ioutil.ReadAll(xAuthIdentityTestResponse.Body)
+		xAuthIdentityTestResponseBodyString := fmt.Sprintf("%s", xAuthIdentityTestRespBodyBytes)
+		if xAuthIdentityTestResponseBodyString != "sniTestUser" {
+			t.Errorf("\nTest failed as X-AuthIdentity value %#v did not match expected %#v for %#v",
+				xAuthIdentityTestResponseBodyString, "sniTestUser", xAuthIdentityTestURI)
 		}
 
 		targetServer.Shutdown(context.Background())

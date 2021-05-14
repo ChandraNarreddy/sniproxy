@@ -72,7 +72,7 @@ func (c *defaultAuthChecker) CheckAuth(r *http.Request, w http.ResponseWriter,
 		}
 
 		//let's add the caller's identity to the request here
-		r.Header.Set("X-Forwarded-For", caller)
+		r.Header.Set("X-AuthIdentity", caller)
 		return true, nil, false, nil
 	case HEADER:
 		header := r.Header.Get(c.authToken.GetTokenName())
