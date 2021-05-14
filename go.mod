@@ -17,4 +17,7 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
 
-retract v1.0.3
+retract (
+	v1.0.4
+	v1.0.3
+)

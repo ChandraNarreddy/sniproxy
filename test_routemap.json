@@ -113,6 +113,13 @@
 	                                      "Route" : ["http://localhost:64431/",0],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "GET",
+	                                      "Path"  : "/x-authidentity/",
+	                                      "Route" : ["http://localhost:64431/x-authidentity"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER"
 																			}
 	                                  ]
 	                }
