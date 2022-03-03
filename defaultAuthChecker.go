@@ -43,54 +43,79 @@ func (c *defaultAuthChecker) CheckAuth(r *http.Request, w http.ResponseWriter,
 		//check whether cookie value in the request matches up to the authTokenName
 		cookie, cookieReadErr := r.Cookie(c.authToken.GetTokenName())
 		if cookieReadErr != nil {
-			return c.authenticate(r, w, authScheme, tokenType)
-		}
-		tokenValidated, caller, validationErr := c.authToken.Validate(cookie.Value,
-			authScheme)
-		if validationErr != nil {
-			return false, nil, false, validationErr
-		}
-		if !tokenValidated {
-			return c.authenticate(r, w, authScheme, tokenType)
-		}
-		//let's get rid of the authTokenCookie here
-		authCookieAsString := cookie.String()
-		allCookies := r.Cookies()
-		allCookiesAsString := ""
-		for i, eachOne := range allCookies {
-			if eachOne.String() != authCookieAsString {
-				if i < len(allCookies)-1 {
-					allCookiesAsString = allCookiesAsString + eachOne.String() + "; "
-				} else {
-					allCookiesAsString = allCookiesAsString + eachOne.String()
+			authenticated, tokenSetter, responded, authErr := c.authenticate(r, w, authScheme, tokenType)
+			if responded || authErr != nil || !authenticated {
+				return authenticated, tokenSetter, responded, authErr
+			}
+			// this means this is the very first request and hence there was no cookie
+			if tokenSetter != nil {
+				tokenSetter.SetToken(w, r, tokenType.String())
+			}
+			//we will temporarily redirect user back to the same location
+			//and hope the cookie is presented this time
+			http.Redirect(w, r, r.URL.RequestURI(), http.StatusTemporaryRedirect)
+			return authenticated, tokenSetter, true, authErr
+		} else {
+			tokenValidated, caller, validationErr := c.authToken.Validate(cookie.Value,
+				authScheme)
+			if validationErr != nil {
+				return false, nil, false, validationErr
+			}
+			if !tokenValidated {
+				return c.authenticate(r, w, authScheme, tokenType)
+			}
+			//let's get rid of the authTokenCookie here
+			authCookieAsString := cookie.String()
+			allCookies := r.Cookies()
+			allCookiesAsString := ""
+			for i, eachOne := range allCookies {
+				if eachOne.String() != authCookieAsString {
+					if i < len(allCookies)-1 {
+						allCookiesAsString = allCookiesAsString + eachOne.String() + "; "
+					} else {
+						allCookiesAsString = allCookiesAsString + eachOne.String()
+					}
 				}
 			}
-		}
-		r.Header.Del("Cookie")
-		if allCookiesAsString != "" {
-			r.Header.Set("Cookie", allCookiesAsString)
+			r.Header.Del("Cookie")
+			if allCookiesAsString != "" {
+				r.Header.Set("Cookie", allCookiesAsString)
+			}
+			//let's add the caller's identity to the request here
+			r.Header.Set("X-AuthIdentity", caller)
+			return true, nil, false, nil
 		}
 
-		//let's add the caller's identity to the request here
-		r.Header.Set("X-AuthIdentity", caller)
-		return true, nil, false, nil
 	case HEADER:
 		header := r.Header.Get(c.authToken.GetTokenName())
 		if header == "" {
-			return c.authenticate(r, w, authScheme, tokenType)
+			authenticated, tokenSetter, responded, authErr := c.authenticate(r, w, authScheme, tokenType)
+			if responded || authErr != nil || !authenticated {
+				return authenticated, tokenSetter, responded, authErr
+			}
+			// this means this is the very first request and hence there was no header value
+			if tokenSetter != nil {
+				tokenSetter.SetToken(w, r, tokenType.String())
+			}
+			//we will temporarily redirect user back to the same location
+			//and hope the header value is presented this time
+			http.Redirect(w, r, r.URL.RequestURI(), http.StatusTemporaryRedirect)
+			return authenticated, tokenSetter, true, authErr
+		} else {
+			tokenValidated, caller, validationErr := c.authToken.Validate(header, authScheme)
+			if validationErr != nil {
+				return false, nil, false, validationErr
+			}
+			if !tokenValidated {
+				return c.authenticate(r, w, authScheme, tokenType)
+			}
+			//let's get rid of the authtokenheader here
+			r.Header.Del(c.authToken.GetTokenName())
+			//let's add the caller's identity to the request here
+			r.Header.Set("X-AuthIdentity", caller)
+			return true, nil, false, nil
 		}
-		tokenValidated, caller, validationErr := c.authToken.Validate(header, authScheme)
-		if validationErr != nil {
-			return false, nil, false, validationErr
-		}
-		if !tokenValidated {
-			return c.authenticate(r, w, authScheme, tokenType)
-		}
-		//let's get rid of the authtokenheader here
-		r.Header.Del(c.authToken.GetTokenName())
-		//let's add the caller's identity to the request here
-		r.Header.Set("X-AuthIdentity", caller)
-		return true, nil, false, nil
+
 	case EITHER:
 		//check whether cookie value in the request matches up to the authTokenName
 		cookie, cookieReadErr := r.Cookie(c.authToken.GetTokenName())

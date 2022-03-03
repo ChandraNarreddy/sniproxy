@@ -1108,7 +1108,8 @@ func TestSniProxy(t *testing.T) {
 			// we will not follow any redirect rather pass the instructions to
 			// the client
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
+				return fmt.Errorf("redirect response")
+				//return http.ErrUseLastResponse
 			},
 			//we will declare a reasonable timeout value here. Alternatively we
 			// can look to parameterize this to fetch its value from routeMap
@@ -1134,6 +1135,8 @@ func TestSniProxy(t *testing.T) {
 		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], "/IncorrectLocalHandlerRouteMap/")
 
 		for testStatus, testURIMap := range testURIMaps {
+			//resetting the cookies jar here
+			jar, _ := cookiejar.New(nil)
 			for index, testURI := range testURIMap {
 				testReq, _ := http.NewRequest(http.MethodGet, testServer.URL+testURI, nil)
 				testServerURL, _ := url.Parse(testServer.URL)
@@ -1149,15 +1152,19 @@ func TestSniProxy(t *testing.T) {
 					Value: testToken,
 				}
 				//lets add the cookie here now
-				if index > 0 {
+				if index > 0 || testStatus != 200 {
 					jar.SetCookies(testServerURL, []*http.Cookie{testCookie})
 					testReq.Header.Set(DefaultAuthTokenName, testToken)
 				}
 				testResponse, testResponseErr := testClient.Do(testReq)
 				if testResponseErr != nil &&
-					!(strings.Contains(testResponseErr.Error(), "context deadline exceeded")) {
+					!(strings.Contains(testResponseErr.Error(), "context deadline exceeded")) &&
+					!(strings.Contains(testResponseErr.Error(), "redirect response")) {
 					t.Errorf("\nTest Request failed: %#v", testResponseErr.Error())
-				} else if testResponse.StatusCode != testStatus {
+				} else if index == 0 && testStatus == 200 && testResponse.StatusCode != http.StatusTemporaryRedirect {
+					t.Errorf("\nTest failed as response code %#v did not match 307 for first ever request without token for %#v",
+						testResponse.StatusCode, testURI)
+				} else if index != 0 && testStatus != 200 && testResponse.StatusCode != testStatus {
 					t.Errorf("\nTest failed as response code %#v did not match expected %#v for %#v",
 						testResponse.StatusCode, testStatus, testURI)
 				} else {
