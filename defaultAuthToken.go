@@ -65,7 +65,7 @@ func (c *defaultAuthToken) setSIV(key []byte) {
 		deficit := c.tokenEncryptionKeySize - len(key)
 		padding := make([]byte, deficit)
 		_, _ = rand.Read(padding)
-		encryptionSecret = append(encryptionSecret[:], padding[:]...)
+		encryptionSecret = append(key[:], padding[:]...)
 	}
 	c.siv = sivWithKey(encryptionSecret)
 }
