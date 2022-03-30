@@ -15,8 +15,8 @@ import (
 const (
 	//DefaultAuthTokenName is SniProxyAuth
 	DefaultAuthTokenName = "SniProxyAuth"
-	//DefaultAuthTokenEncryptionKeySize is 64
-	DefaultAuthTokenEncryptionKeySize = 64
+	//DefaultAuthTokenEncryptionKeySize is 32
+	DefaultAuthTokenEncryptionKeySize = 32
 	//DefaultAuthTokenExpirationDurationInHours is 12
 	DefaultAuthTokenExpirationDurationInHours = 12
 )
