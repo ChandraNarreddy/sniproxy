@@ -62,7 +62,17 @@ func (c *defaultAuthChecker) CheckAuth(r *http.Request, w http.ResponseWriter,
 				return false, nil, false, validationErr
 			}
 			if !tokenValidated {
-				return c.authenticate(r, w, authScheme, tokenType)
+				authenticated, tokenSetter, responded, authErr := c.authenticate(r, w, authScheme, tokenType)
+				if responded || authErr != nil || !authenticated {
+					return authenticated, tokenSetter, responded, authErr
+				}
+				if tokenSetter != nil {
+					tokenSetter.SetToken(w, r, tokenType.String())
+				}
+				//we will temporarily redirect user back to the same location
+				//and hope the cookie is presented this time
+				http.Redirect(w, r, r.URL.RequestURI(), http.StatusTemporaryRedirect)
+				return authenticated, tokenSetter, true, authErr
 			}
 			//let's get rid of the authTokenCookie here
 			authCookieAsString := cookie.String()
@@ -107,7 +117,17 @@ func (c *defaultAuthChecker) CheckAuth(r *http.Request, w http.ResponseWriter,
 				return false, nil, false, validationErr
 			}
 			if !tokenValidated {
-				return c.authenticate(r, w, authScheme, tokenType)
+				authenticated, tokenSetter, responded, authErr := c.authenticate(r, w, authScheme, tokenType)
+				if responded || authErr != nil || !authenticated {
+					return authenticated, tokenSetter, responded, authErr
+				}
+				if tokenSetter != nil {
+					tokenSetter.SetToken(w, r, tokenType.String())
+				}
+				//we will temporarily redirect user back to the same location
+				//and hope the cookie is presented this time
+				http.Redirect(w, r, r.URL.RequestURI(), http.StatusTemporaryRedirect)
+				return authenticated, tokenSetter, true, authErr
 			}
 			//let's get rid of the authtokenheader here
 			r.Header.Del(c.authToken.GetTokenName())
