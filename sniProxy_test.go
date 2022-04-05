@@ -1,6 +1,7 @@
 package sniproxy
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -19,6 +20,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -158,6 +160,29 @@ const (
 																				"Method": "GET",
 	                                      "Path"  : "/x-authidentity/",
 	                                      "Route" : ["http://localhost:64431/x-authidentity"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post/",
+	                                      "Route" : ["http://localhost:64431/post/"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER",
+																				"MaxRequestBodyBytes": 10
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post-oversize/",
+	                                      "Route" : ["http://localhost:64431/post-oversize/"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER",
+																				"MaxRequestBodyBytes": 10
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post-unlimited/*query",
+	                                      "Route" : ["http://localhost:64431/post-unlimited/?bodyLength=", 0],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
 																			}
@@ -987,6 +1012,31 @@ func startTargetServer(port string, wg *sync.WaitGroup) *http.Server {
 			} else if strings.Contains(req.URL.Path, "x-authidentity") {
 				w.WriteHeader(200)
 				io.WriteString(w, req.Header.Get("X-AuthIdentity"))
+			} else if strings.Contains(req.URL.Path, "/post/") {
+				body, _ := ioutil.ReadAll(req.Body)
+				if len(body) > 1024 {
+					w.WriteHeader(500)
+					io.WriteString(w, "Inbound request body's max length not honored")
+				} else {
+					w.WriteHeader(200)
+					io.WriteString(w, "Pass")
+				}
+			} else if strings.Contains(req.URL.Path, "/post-oversize/") {
+				//if the request has made it here, then we return 200 since that would signal that the test has failed.
+				w.WriteHeader(200)
+				io.WriteString(w, "Oversized request has made it through to the target")
+			} else if strings.Contains(req.URL.Path, "/post-unlimited/") {
+				body, _ := ioutil.ReadAll(req.Body)
+				req.ParseForm()
+				bodyLength := req.FormValue("bodyLength")
+				lengthSent, _ := strconv.ParseInt(bodyLength, 10, 64)
+				if int64(len(body)) != lengthSent {
+					w.WriteHeader(500)
+					io.WriteString(w, "Inbound request body's entire length not allowed")
+				} else {
+					w.WriteHeader(200)
+					io.WriteString(w, "Pass")
+				}
 			}
 		}),
 	}
@@ -1115,30 +1165,40 @@ func TestSniProxy(t *testing.T) {
 			// can look to parameterize this to fetch its value from routeMap
 			Timeout: 5 * time.Second,
 		}
-		testURIMaps := make(map[int][]string)
-		testURIMaps[200] = append(testURIMaps[200], "/search/wonderful")
-		testURIMaps[200] = append(testURIMaps[200], "/search/sniproxy")
-		testURIMaps[200] = append(testURIMaps[200], "/resource/behind/selfhandling/Authenticator")
-		testURIMaps[200] = append(testURIMaps[200], "/blindforwarder/http/localhost:64431/?q=sniproxy")
-		testURIMaps[http.StatusForbidden] = append(testURIMaps[http.StatusForbidden], "/authorizationError/")
-		testURIMaps[http.StatusUnauthorized] = append(testURIMaps[http.StatusUnauthorized], "/requestUnauthorized/")
-		testURIMaps[404] = append(testURIMaps[404], "/pattern/not/caught/by/proxy")
-		testURIMaps[302] = append(testURIMaps[302], "/redirect/")
-		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/wild/notexistingdomain/validPathButNotExistingDownstream")
-		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/failureCase/RoutePathIncorrect")
-		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/invalid/")
-		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], "/authFailure/")
-		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], "/WrongTokenType/")
-		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], "/AuthCheckError/")
-		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], "/InvalidRoutePath/")
-		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], "/Non-existingLocalHandlerPath/")
-		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], "/IncorrectLocalHandlerRouteMap/")
+		testURIMaps := make(map[int][][]string)
+		testURIMaps[200] = append(testURIMaps[200], []string{"GET", "/search/wonderful"})
+		testURIMaps[200] = append(testURIMaps[200], []string{"GET", "/search/sniproxy"})
+		testURIMaps[200] = append(testURIMaps[200], []string{"GET", "/resource/behind/selfhandling/Authenticator"})
+		testURIMaps[200] = append(testURIMaps[200], []string{"GET", "/blindforwarder/http/localhost:64431/?q=sniproxy"})
+		testURIMaps[http.StatusForbidden] = append(testURIMaps[http.StatusForbidden], []string{"GET", "/authorizationError/"})
+		testURIMaps[http.StatusUnauthorized] = append(testURIMaps[http.StatusUnauthorized], []string{"GET", "/requestUnauthorized/"})
+		testURIMaps[404] = append(testURIMaps[404], []string{"GET", "/pattern/not/caught/by/proxy"})
+		testURIMaps[302] = append(testURIMaps[302], []string{"GET", "/redirect/"})
+		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], []string{"GET", "/wild/notexistingdomain/validPathButNotExistingDownstream"})
+		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], []string{"GET", "/failureCase/RoutePathIncorrect"})
+		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], []string{"GET", "/invalid/"})
+		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], []string{"GET", "/authFailure/"})
+		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], []string{"GET", "/WrongTokenType/"})
+		testURIMaps[http.StatusFound] = append(testURIMaps[http.StatusFound], []string{"GET", "/AuthCheckError/"})
+		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], []string{"GET", "/InvalidRoutePath/"})
+		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], []string{"GET", "/Non-existingLocalHandlerPath/"})
+		testURIMaps[http.StatusInternalServerError] = append(testURIMaps[http.StatusInternalServerError], []string{"GET", "/IncorrectLocalHandlerRouteMap/"})
+
+		testURIMaps[200] = append(testURIMaps[200], []string{"POST", "/post/", "under10"})
+		testURIMaps[http.StatusBadRequest] = append(testURIMaps[http.StatusBadRequest], []string{"POST", "/post-oversize/", "over10bytes"})
+		testURIMaps[200] = append(testURIMaps[200], []string{"POST", "/post-unlimited/?bodyLength=14", "exactly14bytes"})
 
 		for testStatus, testURIMap := range testURIMaps {
 			//resetting the cookies jar here
 			jar, _ := cookiejar.New(nil)
-			for index, testURI := range testURIMap {
-				testReq, _ := http.NewRequest(http.MethodGet, testServer.URL+testURI, nil)
+			for index, methodPath := range testURIMap {
+				var body io.Reader
+				if len(methodPath) == 3 {
+					body = bytes.NewBufferString(methodPath[2])
+				} else {
+					body = nil
+				}
+				testReq, _ := http.NewRequest(methodPath[0], testServer.URL+methodPath[1], body)
 				testServerURL, _ := url.Parse(testServer.URL)
 				jar.SetCookies(testServerURL, []*http.Cookie{&http.Cookie{
 					Name:  "DummyCookie",
@@ -1163,10 +1223,10 @@ func TestSniProxy(t *testing.T) {
 					t.Errorf("\nTest Request failed: %#v", testResponseErr.Error())
 				} else if index == 0 && testStatus == 200 && testResponse.StatusCode != http.StatusTemporaryRedirect {
 					t.Errorf("\nTest failed as response code %#v did not match 307 for first ever request without token for %#v",
-						testResponse.StatusCode, testURI)
+						testResponse.StatusCode, methodPath[1])
 				} else if index != 0 && testStatus != 200 && testResponse.StatusCode != testStatus {
 					t.Errorf("\nTest failed as response code %#v did not match expected %#v for %#v",
-						testResponse.StatusCode, testStatus, testURI)
+						testResponse.StatusCode, testStatus, methodPath[1])
 				} else {
 					testResponse.Body.Close()
 				}
