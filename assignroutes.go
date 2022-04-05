@@ -1,8 +1,10 @@
 package sniproxy
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -209,9 +211,22 @@ func assignRoutes(pHMap *proxyHanlderMap, routeMap *RouteMap,
 							return
 						}
 					}
-
+					var bodyBuf []byte
+					var bodyReadErr error
+					if localMap.MaxRequestBodyBytes != nil {
+						body := http.MaxBytesReader(w, r.Body, *localMap.MaxRequestBodyBytes)
+						bodyBuf, bodyReadErr = ioutil.ReadAll(body)
+					} else {
+						bodyBuf, bodyReadErr = ioutil.ReadAll(r.Body)
+					}
+					if bodyReadErr != nil {
+						log.Printf("Sniproxy error - Failure reading body in forwarding request to %s for inbound request %#v - %+v",
+							route, r.RequestURI, bodyReadErr)
+						writeErrorResponse(w, http.StatusBadRequest)
+						return
+					}
 					//create a new HTTP request
-					req, _ := http.NewRequest(localMap.Method, uri.String(), r.Body)
+					req, _ := http.NewRequest(localMap.Method, uri.String(), bytes.NewBuffer(bodyBuf))
 
 					// add all end to end headers from incoming request to the outgoing
 					for requestHeaderKey, requestHeaderValues := range r.Header {

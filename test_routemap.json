@@ -120,6 +120,29 @@
 	                                      "Route" : ["http://localhost:64431/x-authidentity"],
 																				"AuthenticatorScheme": "testPass",
 																				"TokenType": "EITHER"
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post/",
+	                                      "Route" : ["http://localhost:64431/post/"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER",
+																				"MaxRequestBodyBytes": 10
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post-oversize/",
+	                                      "Route" : ["http://localhost:64431/post-oversize/"],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER",
+																				"MaxRequestBodyBytes": 10
+																			},
+																			{
+																				"Method": "POST",
+	                                      "Path"  : "/post-unlimited/*query",
+	                                      "Route" : ["http://localhost:64431/post-unlimited/?bodyLength=", 0],
+																				"AuthenticatorScheme": "testPass",
+																				"TokenType": "EITHER"
 																			}
 	                                  ]
 	                }

@@ -19,6 +19,7 @@ type MethodPathMap struct {
 	Route               []interface{} `json:"Route"`
 	AuthenticatorScheme string        `json:"AuthenticatorScheme"`
 	TokenType           string        `json:"TokenType"`
+	MaxRequestBodyBytes *int64        `json:"MaxRequestBodyBytes,omitempty"`
 }
 
 //RouteMap is a collection of HostMap called Routes

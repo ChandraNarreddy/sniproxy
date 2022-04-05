@@ -103,6 +103,7 @@ SniProxy uses [httprouter](https://github.com/julienschmidt/httprouter) under th
       "Route" :
       "AuthenticatorScheme":
       "TokenType" :
+      "MaxRequestBodyBytes":
     }
   ]
 ```
@@ -125,6 +126,12 @@ TokenTypes that a particular request needs verified for. One can implement the [
 ```
 "TokenType": "Cookie"
 ```
+##### MaxRequestBodyBytes (Optional config)
+MaxRequestBodyBytes is the maximum number of bytes the proxy should limit to reading from the incoming request body.
+This is an optional parameter, if its not specified, the proxy by default reads entire request body and forwards it onward.
+If a MaxRequestBodyBytes value is specified for a route and an incoming request exceeds the configured body length, the proxy throws a bad request error in response.
+Such requests are not even forwarded onward. This is primarily to be used if you are worried about Denial of Service or memory exhaustion and related QoS failures.
+
 ##### LocalHandlers
 Any localhandlers that SniProxy needs to take note of should go in as routes in this pattern `[-1, "localHandlerRegistryName"]`. You have the flexibility to register the local handlers at the proxy level or at each individual host level by flipping the _DefaultAuthorizationErrorRedirectPathLocalHandler_ and _DefaultAuthorizationFailedRedirectPathLocalHandler_ values. By default, SniProxy defines them as relative paths for each host but it is easy to override them to global proxy level endpoints.
 ```
@@ -156,6 +163,14 @@ Create the necessary proxy configuration and save it, say "sniproxy_routes.json"
                                         "Route" : [ "https://www.",0,".com/", 1 ],
                                         "AuthenticatorScheme": "myAuthenticatorAlias",
                                         "TokenType": "Either"
+                                      },
+                                      {
+                                        "Method": "POST",
+                                        "Path"  : "/fileupload/1MBLimit",
+                                        "Route" : [ "https://www.myinternalfileserver.com/"],
+                                        "AuthenticatorScheme": "myAuthenticatorAlias",
+                                        "TokenType": "Either",
+                                        "MaxRequestBodyBytes": 1048576
                                       }
                                     ]
                 },
