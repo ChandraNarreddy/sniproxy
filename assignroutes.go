@@ -34,13 +34,13 @@ var HopByHopHeaders = map[string]struct{}{
 	"Upgrade":             {},
 }
 
-//LocalHandler is a generic interface for implementations to satisfy as a stand-in for it.
+// LocalHandler is a generic interface for implementations to satisfy as a stand-in for it.
 type LocalHandler interface {
 	//Handle handles the request and responds back on the writer
 	Handle(w http.ResponseWriter, r *http.Request)
 }
 
-//RegisterLocalHandler is a function for any new LocalHandler to be registered and
+// RegisterLocalHandler is a function for any new LocalHandler to be registered and
 // be made available in the localHandlers map.
 // Further, the main function of any consuming app should also declare a (non-referencing) import on the
 // implementor package
@@ -65,21 +65,21 @@ var (
 	AuthorizationFailedRedirectPath = "/requestUnauthorized/"
 )
 
-//DefaultAuthorizationErrorRedirectPathLocalHandler to handle authorization errors
+// DefaultAuthorizationErrorRedirectPathLocalHandler to handle authorization errors
 type DefaultAuthorizationErrorRedirectPathLocalHandler struct {
 }
 
-//Handle handles authorization errors by returning a forbidden status
+// Handle handles authorization errors by returning a forbidden status
 func (c *DefaultAuthorizationErrorRedirectPathLocalHandler) Handle(w http.ResponseWriter,
 	r *http.Request) {
 	writeErrorResponse(w, http.StatusForbidden)
 }
 
-//DefaultAuthorizationFailedRedirectPathLocalHandler to handle authorization failures
+// DefaultAuthorizationFailedRedirectPathLocalHandler to handle authorization failures
 type DefaultAuthorizationFailedRedirectPathLocalHandler struct {
 }
 
-//Handle handles authorization failures and returns Unauthorized status
+// Handle handles authorization failures and returns Unauthorized status
 func (c *DefaultAuthorizationFailedRedirectPathLocalHandler) Handle(w http.ResponseWriter,
 	r *http.Request) {
 	writeErrorResponse(w, http.StatusUnauthorized)
@@ -299,11 +299,7 @@ func routeBuilder(ps httprouter.Params, route []interface{}) (string, error) {
 			URL = URL + T
 		case float64:
 			if len(ps) > int(T) {
-				if strings.HasPrefix(ps[int(T)].Value, "/") {
-					URL = URL + url.PathEscape(strings.TrimPrefix(ps[int(T)].Value, "/"))
-				} else {
-					URL = URL + url.PathEscape(ps[int(T)].Value)
-				}
+				URL = URL + strings.TrimPrefix(ps[int(T)].Value, "/")
 			} else {
 				return URL,
 					fmt.Errorf("routeBuilder failed! Inbound request has fewer than %d params", int(T))
